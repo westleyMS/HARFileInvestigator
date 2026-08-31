@@ -1,5 +1,3 @@
-#A HAR file investigation tool to troubleshoot HAR file traces from browser tools
-
 # HAR File Investigator
 
 `HAR File Investigator` is a Windows desktop tool for loading, searching, filtering, tagging, and exporting HTTP traffic from HAR files.
