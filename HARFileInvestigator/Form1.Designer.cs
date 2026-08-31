@@ -18,6 +18,7 @@
         private Button clearQueryButton = null!;
         private Button filterToggleButton = null!;
         private Button tagButton = null!;
+        private Button clearSessionsButton = null!;
         private Button tagMenuButton = null!;
         private Button previousMatchButton = null!;
         private Button nextMatchButton = null!;
@@ -73,6 +74,7 @@
             applyQueryButton = new Button();
             tagMenuButton = new Button();
             tagButton = new Button();
+            clearSessionsButton = new Button();
             filterToggleButton = new Button();
             timelineButton = new Button();
             exportButton = new Button();
@@ -147,6 +149,7 @@
             filterPanel.Controls.Add(applyQueryButton);
             filterPanel.Controls.Add(tagMenuButton);
             filterPanel.Controls.Add(tagButton);
+            filterPanel.Controls.Add(clearSessionsButton);
             filterPanel.Controls.Add(filterToggleButton);
             filterPanel.Controls.Add(timelineButton);
             filterPanel.Controls.Add(exportButton);
@@ -244,6 +247,17 @@
             tagButton.Text = "Tag";
             tagButton.UseVisualStyleBackColor = true;
             tagButton.Click += tagButton_Click;
+            // 
+            // clearSessionsButton
+            // 
+            clearSessionsButton.Location = new Point(1607, 138);
+            clearSessionsButton.Margin = new Padding(9, 10, 9, 10);
+            clearSessionsButton.Name = "clearSessionsButton";
+            clearSessionsButton.Size = new Size(260, 77);
+            clearSessionsButton.TabIndex = 17;
+            clearSessionsButton.Text = "Clear Sessions";
+            clearSessionsButton.UseVisualStyleBackColor = true;
+            clearSessionsButton.Click += clearSessionsButton_Click;
             // 
             // filterToggleButton
             // 

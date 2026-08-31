@@ -32,6 +32,7 @@ namespace HARFileInvestigator
         private string _lastAppliedColumnMenuSearch = string.Empty;
         private readonly ContextMenuStrip _rowContextMenu = new();
         private readonly ToolStripMenuItem _rowTagMenuItem = new("Tag");
+        private readonly ToolStripMenuItem _rowDeleteMenuItem = new("Delete");
 
         private RichTextBox? _activeRequestSearchBox;
         private int _requestSearchPosition;
@@ -160,6 +161,7 @@ namespace HARFileInvestigator
             _dynamicColumns.Clear();
             entriesGrid.CellFormatting += EntriesGrid_CellFormatting;
             entriesGrid.ColumnHeaderMouseClick += EntriesGrid_ColumnHeaderMouseClick;
+            entriesGrid.KeyDown += EntriesGrid_KeyDown;
 
             entriesGrid.Columns.Add(new DataGridViewTextBoxColumn
             {
@@ -462,6 +464,39 @@ namespace HARFileInvestigator
         private void tagMenuButton_Click(object sender, EventArgs e)
         {
             OpenTagManager();
+        }
+
+        private void clearSessionsButton_Click(object sender, EventArgs e)
+        {
+            if (_allEntries.Count == 0)
+            {
+                return;
+            }
+
+            var result = MessageBox.Show(
+                this,
+                "Clear all loaded sessions from the current view?",
+                "Clear Sessions",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result != DialogResult.Yes)
+            {
+                return;
+            }
+
+            _allEntries.Clear();
+            _currentHarFilePath = null;
+            RebuildDynamicColumns();
+            ApplyFilters();
+
+            requestTextBox.Clear();
+            responseTextBox.Clear();
+            requestJwtTextBox.Clear();
+            responseJwtTextBox.Clear();
+
+            Text = "HAR File Investigator";
+            SaveSettingsFromUi();
         }
 
         private void OpenTagManager()
@@ -853,9 +888,64 @@ namespace HARFileInvestigator
             var propertiesItem = new ToolStripMenuItem("Properties");
             propertiesItem.Click += (_, _) => ShowSelectedRowProperties();
 
+            _rowDeleteMenuItem.Enabled = entriesGrid.SelectedRows.Count > 0;
+            _rowDeleteMenuItem.Click -= RowDeleteMenuItem_Click;
+            _rowDeleteMenuItem.Click += RowDeleteMenuItem_Click;
+
             _rowContextMenu.Items.Add(_rowTagMenuItem);
             _rowContextMenu.Items.Add(compareItem);
             _rowContextMenu.Items.Add(propertiesItem);
+            _rowContextMenu.Items.Add(new ToolStripSeparator());
+            _rowContextMenu.Items.Add(_rowDeleteMenuItem);
+        }
+
+        private void RowDeleteMenuItem_Click(object? sender, EventArgs e)
+        {
+            DeleteSelectedRowsFromView();
+        }
+
+        private void EntriesGrid_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Delete)
+            {
+                return;
+            }
+
+            DeleteSelectedRowsFromView();
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+        }
+
+        private void DeleteSelectedRowsFromView()
+        {
+            var selectedEntries = entriesGrid.SelectedRows
+                .Cast<DataGridViewRow>()
+                .Select(x => x.DataBoundItem as HarTraceEntry)
+                .Where(x => x is not null)
+                .Cast<HarTraceEntry>()
+                .Distinct()
+                .ToList();
+
+            if (selectedEntries.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var entry in selectedEntries)
+            {
+                _allEntries.Remove(entry);
+            }
+
+            ApplyFilters();
+
+            if (string.IsNullOrWhiteSpace(_currentHarFilePath))
+            {
+                Text = $"HAR File Investigator ({_allEntries.Count} entries)";
+            }
+            else
+            {
+                Text = $"HAR File Investigator - {Path.GetFileName(_currentHarFilePath)} ({_allEntries.Count} entries)";
+            }
         }
 
         private void ApplyTagToSelectedRows(string tag)
@@ -1398,7 +1488,7 @@ namespace HARFileInvestigator
 
         private static bool EvaluateRawTerm(HarTraceEntry entry, string token)
         {
-            var match = Regex.Match(token, "^(?<field>[a-zA-Z_][a-zA-Z0-9_]*)(?<op><=|>=|!=|=|:|<|>)(?<value>.+)$");
+            var match = Regex.Match(token, "^(?<field>[a-zA-Z_][a-zA-Z0-9_.-]*)(?<op><=|>=|!=|=|:|<|>)(?<value>.+)$");
             if (!match.Success)
             {
                 return entry.SearchText.Contains(Unquote(token), StringComparison.OrdinalIgnoreCase);
@@ -1513,6 +1603,10 @@ namespace HARFileInvestigator
                 requestJwtTextBox.Clear();
                 responseJwtTextBox.Clear();
             }
+
+            var queryText = GetQueryText();
+            ApplyQueryHighlightsToPanes(queryText);
+            AutoMarkQueryInPanesForHighlightedRow();
 
             UpdateTimelineFromHighlights();
             UpdateStatusBarCounts();
